@@ -1,0 +1,28 @@
+#!/bin/bash
+
+gamess_bin="/home/ngolubev/Packages/software/gamess-uk/7.0/bin/gamess"
+
+#create temporary directory
+mkdir -p %TMP_DIR
+cd %TMP_DIR
+
+#perform SCF MP2 calculations; write output to gamess.out file
+$gamess_bin << EOF > gamess.out
+charge 0
+geometry angstroms
+$geometry{
+ %X %Y %Z %AN %AL
+};
+end
+BASIS 6-31G
+SCFTYPE MP2
+EOF
+
+#search mp2 energy in output file
+mp2=`cat gamess.out | grep "total energy (mp2)" | awk '{print $4}'`
+
+#print output file
+cat <<- EOF > output.out
+\$energy
+ $mp2
+EOF
