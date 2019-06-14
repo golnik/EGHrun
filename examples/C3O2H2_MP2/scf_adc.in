@@ -22,7 +22,7 @@ EOF
 mp2=`cat gamess.out | grep "total energy (mp2)" | awk '{print $4}'`
 
 #print output file
-cat <<- EOF > output.out
+cat <<- EOF > %RUN_OUT
 \$energy
  $mp2
 EOF

@@ -1,0 +1,140 @@
+#!/bin/bash
+
+gamess_bin="/home/ngolubev/Packages/software/gamess-uk/7.0/bin/gamess"
+theADCcode_bin="/home/ngolubev/programs/ADC/theADCcode/build/theADCcode"
+
+module add gcc/7.3.0
+
+# define filenames
+basisset=/home/ngolubev/programs/EGHrun/examples/C3O2H2_ADC/_basisset.dat
+
+#create temporary directory
+mkdir -p %TMP_DIR
+cd %TMP_DIR
+
+active="6 to 90"                 # active orbital space
+
+symgroup="Cs"                    # symmetry line or constanti
+sym_nmbs="1 2"                   # symmetry numbers of non-empty irreps
+
+#state of interest for EGHrun
+i_sym=1		#in which symmetry irrep
+i_state=2	#which state
+
+#         1    2    3    4    5    6    7    8
+#        ---------------------------------------
+#  Cs     a'   a"
+#  Ci     ag   au
+#  C2      a    b
+#  D2      a   b1   b2   b3
+#  C2v    a1   a2   b1   b2
+#  C2h    ag   bg   au   bu
+#  D2h    ag  b1g  b2g  b3g   au  b1u  b2u  b3u
+#
+#
+#############################################################################
+#
+# some settings:
+
+# normally no changes beyond this point
+
+# gamess-environment:
+export ed3=dfile
+export ed6=vfile
+
+# some output
+echo This calculation was done on `hostname`
+
+#
+#
+#############################################################################
+#
+# SCF-Calculation:
+
+echo "#begin<scf>"
+$gamess_bin << EOF > gamess.out
+title
+$molec SCF calculation (basis $basis)
+charge 0
+geometry angstroms
+$geometry{
+ %X %Y %Z %AN %AL
+};
+end
+integral high
+form high
+BASIS
+`cat $basisset`
+END
+SCFTYPE MP2
+Threshold 8
+vectors extguess
+enter 1
+EOF
+echo "#end<scf>"
+
+#
+#
+#############################################################################
+#
+# SCF-Transformation
+
+echo "#begin<trans>"
+$gamess_bin << EOF
+restart
+title
+$molec transformation to MO-basis (basis $basis)
+charge 0
+geometry angstroms
+$geometry{
+ %X %Y %Z %AN %AL
+};
+end
+integral high
+BASIS
+`cat $basisset`
+END
+bypass hf
+runtype transform
+active
+$active
+end
+threshold 8
+vectors 1
+enter 1
+EOF
+echo "#end<trans>"
+
+time $theADCcode_bin << EOF > ADC.out
+&frontend
+guk
+&propagator
+ndadc3ip; sym $sym_nmbs; spin 2
+&self-energy
+infinite
+IDIAGL 1
+SYMGRP $symgroup
+&diagonalizer
+lanczos
+iter 100
+&eigen
+ps 0.5
+thresh 0.0
+EOF
+
+#search mp2 energy in gamess output file
+mp2=`cat gamess.out | grep "total energy (mp2)" | awk '{print $4}'`
+
+#ADC ionization potential
+ADC_ip=`cat ADC.out | grep " $i_state:" | sed -n "$i_sym p" | awk -F'[, ]' '{print $3}'`
+
+au2eV=27.211396
+en=`echo "print($mp2 + $ADC_ip / $au2eV)" | python`
+
+#print output file
+cat <<- EOF > %RUN_OUT
+\$energy
+ $en
+EOF
+
+exit 0
