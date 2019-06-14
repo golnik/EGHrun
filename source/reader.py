@@ -6,7 +6,7 @@ class Reader(object):
         pass
 
     def get_energy(self, string):
-        energy_pattern = r'[^\S\r\n]*\$energy\s+([-+]?[0-9]*\.?[0-9]+)$'
+        energy_pattern = r'[^\S\r\n]*\$energy\s+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)$'
         energy_regex = re.compile(energy_pattern,re.IGNORECASE|re.MULTILINE)
 
         match = re.search(energy_regex,string)

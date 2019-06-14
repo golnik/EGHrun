@@ -1,9 +1,10 @@
 import re
 
 class Input(object):
-    def __init__(self, geom, tmp_dir):
+    def __init__(self, geom, tmp_dir, run_out):
         self.geom = geom
         self.tmp_dir = tmp_dir
+        self.run_out = run_out
 
     def subst_template(self, inp_fname, out_fname):
         #open file and read content
@@ -26,6 +27,10 @@ class Input(object):
         #replace %TMP_DIR variable
         tmp_dir_pattern = "%TMP_DIR"
         content = self.subst_string_pattern(content,tmp_dir_pattern,self.tmp_dir)
+
+        #replace %RUN_OUT variable
+        run_out_pattern = "%RUN_OUT"
+        content = self.subst_string_pattern(content,run_out_pattern,self.run_out)
 
         #write content to new output file
         with open(out_fname,"w") as file:

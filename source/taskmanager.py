@@ -103,7 +103,7 @@ class TaskManager(object):
 
         return res_list
 
-    def calc(self,task_list):
+    def calc(self,task_list,print_out=False):
         '''
         This function runs calculations for specified task list.
         '''
@@ -121,10 +121,13 @@ class TaskManager(object):
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir)
 
+            #specify outfile file with energy
+            run_out_fname = os.path.join(tmp_dir,self.run_out_fname)
+
             #create input object
             inp_fname = os.path.join(tmp_dir,"input.inp")
 
-            inp = Input(geom,tmp_dir)
+            inp = Input(geom,tmp_dir,run_out_fname)
             inp.subst_template(self.template_script_fname,inp_fname)
 
             #initiate subprocess for calculations
@@ -132,13 +135,19 @@ class TaskManager(object):
                                        stdin=subprocess.PIPE,
                                        stdout=subprocess.PIPE,
                                        bufsize=1,universal_newlines=True)
-            process.wait()
+            #process.wait()
+            while process.poll() is None:
+                out = process.stdout.readline()
+                if print_out==True:     #print output on-the-fly
+                    print(out,end='')
 
-            #here we parse output
-            run_out_fname = os.path.join(tmp_dir,self.run_out_fname)
-            run_out_stream = open(run_out_fname,"r")
-            run_out_str = run_out_stream.read()
-            run_out_stream.close()
+            #here we parse run_output
+            run_out_str = ''
+            try:
+                with open(run_out_fname,'r') as run_out_stream:
+                    run_out_str = run_out_stream.read()
+            except:
+                raise Exception("File %s with energy output is not found." % run_out_fname)
 
             #read output file
             reader = Reader()
