@@ -5,9 +5,6 @@ theADCcode_bin="/home/ngolubev/programs/ADC/theADCcode/build/theADCcode"
 
 module add gcc/7.3.0
 
-# define filenames
-basisset=/home/ngolubev/programs/EGHrun/examples/C3O2H2_ADC/_basisset.dat
-
 #create temporary directory
 mkdir -p %TMP_DIR
 cd %TMP_DIR
@@ -63,9 +60,7 @@ $geometry{
 end
 integral high
 form high
-BASIS
-`cat $basisset`
-END
+BASIS DZP
 SCFTYPE MP2
 Threshold 8
 vectors extguess
@@ -91,9 +86,7 @@ $geometry{
 };
 end
 integral high
-BASIS
-`cat $basisset`
-END
+BASIS DZP
 bypass hf
 runtype transform
 active
@@ -128,6 +121,7 @@ mp2=`cat gamess.out | grep "total energy (mp2)" | awk '{print $4}'`
 #ADC ionization potential
 ADC_ip=`cat ADC.out | grep " $i_state:" | sed -n "$i_sym p" | awk -F'[, ]' '{print $3}'`
 
+#calculate energy of the final ionic state
 au2eV=27.211396
 en=`echo "print($mp2 + $ADC_ip / $au2eV)" | python`
 
