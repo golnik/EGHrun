@@ -34,7 +34,7 @@ class TaskManager(object):
         #loop over coordinates
         for i_coord in range(self.n_coords):
             i_rem = (i_coord+1) % 3
-            #z symmetry conditions for hessians
+            #z symmetry conditions for gradients
             if z_sym == True:
                 if i_rem == 0:
                     continue
@@ -75,8 +75,37 @@ class TaskManager(object):
 
                 #z symmetry conditions for hessians
                 if z_sym == True:
-                    if not (i_rem == 0 and j_rem == 0):
-                        if (i_rem == 0 or j_rem == 0):
+                    if i_rem == 0 or j_rem == 0:
+                        if i_rem == j_rem:  #if both coordinates are z-symmetric
+                            if i_coord == j_coord:   #identical coordinates
+                                tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
+
+                                #special case with no displacements
+                                task_type = 2
+                                res = [geom,tmp_dir,task_type,[i_coord,0,
+                                                               j_coord,0]]
+                                res_list.append(res)
+                            else:                   #z coordinates of different atoms
+                                ngeom = copy.deepcopy(geom)
+
+                                #one of the coordinates should be with positive displacement
+                                coord_i = ngeom.get_i_coord(i_coord)
+                                coord_i += incr
+                                ngeom.set_i_coord(i_coord,coord_i)
+
+                                #another coordinate with negative displacement
+                                coord_j = ngeom.get_i_coord(j_coord)
+                                coord_j -= incr
+                                ngeom.set_i_coord(j_coord,coord_j)
+
+                                tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
+
+                                task_type = 2
+                                res = [ngeom,tmp_dir,task_type,[i_coord,0,
+                                                                j_coord,0]]
+                                res_list.append(res)
+                            counter += 1
+                        else:           #if only one coordinate is z-symmetric, hessian is zero
                             continue
 
                 #loop over plus and minus increment
@@ -209,6 +238,9 @@ class TaskManager(object):
                         Ump[i_coord][j_coord] = energy
                     elif(i_sign<0 and j_sign<0):
                         Umm[i_coord][j_coord] = energy
+                    elif(i_sign==0 and j_sign==0):  #special case, z symmetry
+                        Upm[i_coord][j_coord] = energy
+                        Ump[i_coord][j_coord] = energy
                 else:
                     energy_ref = energy
 
