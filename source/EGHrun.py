@@ -169,6 +169,12 @@ if __name__ == '__main__':
 
             #append task to task list
             job_list.append(job_local)
+
+        print(
+        "--------------------------\n"
+        "--- Calculations start ---\n"
+        "--------------------------\n")
+        sys.stdout.flush()
     else:
         job_list = None
 
