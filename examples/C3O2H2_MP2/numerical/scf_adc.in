@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gamess_bin="/home/ngolubev/Packages/software/gamess-uk/7.0/bin/gamess"
+gamess_bin="/software/apps/guk/7.0/bin/gamess"
 
 #create temporary directory
 mkdir -p %TMP_DIR
