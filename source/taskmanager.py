@@ -59,53 +59,42 @@ class TaskManager(object):
 
         return res_list
 
-    # def get_task_list_hess(self,geom,incr=0.001,z_sym=False):
-    #     '''
-    #     Return list containing tasks to calculate hessian
-    #     '''
-    #     self.incr = incr
-    #     self.n_coords = geom.get_n_coords()
+    def get_task_list_hess(self,geom):
+        '''
+        Return list containing tasks to calculate hessian
+        '''
+        res_list = [] #results list
 
-    #     res_list = [] #results list
+        counter = 0
+        #loop over modes
+        for i_mode in range(self.n_modes):
+            for j_mode in range(i_mode,self.n_modes):
+                #loop over plus and minus increment
+                for i_sign in [-1,+1]:
+                    for j_sign in [-1,+1]:
+                        ngeom = copy.deepcopy(geom)
 
-    #     counter = 0
-    #     #loop over coordinates
-    #     for i_coord in range(self.n_coords):
-    #         i_rem = (i_coord+1) % 3
-    #         for j_coord in range(i_coord,self.n_coords):
-    #             j_rem = (j_coord+1) % 3
+                        #loop over coordinates within mode
+                        for i_coord in range(ngeom.get_n_coords()):
+                            coord = ngeom.get_i_coord(i_coord)
+                            coord += i_sign * self.modes[i_mode].get_i_coord(i_coord)
+                            ngeom.set_i_coord(i_coord,coord)
 
-    #             #z symmetry conditions for hessians
-    #             if z_sym == True:
-    #                 if i_rem == 0 or j_rem == 0:
-    #                     if i_rem == j_rem:  #if both coordinates are z-symmetric treat as usual
-    #                         pass
-    #                     else:               #if only one coordinate is z-symmetric, hessian is zero
-    #                         continue
+                        for j_coord in range(ngeom.get_n_coords()):
+                            coord = ngeom.get_i_coord(j_coord)
+                            coord += j_sign * self.modes[j_mode].get_i_coord(j_coord)
+                            ngeom.set_i_coord(j_coord,coord)
 
-    #             #loop over plus and minus increment
-    #             for i_incr in [-incr,+incr]:
-    #                 for j_incr in [-incr,+incr]:
-    #                     ngeom = copy.deepcopy(geom)
+                        tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
 
-    #                     coord_i = ngeom.get_i_coord(i_coord)
-    #                     coord_i += i_incr
-    #                     ngeom.set_i_coord(i_coord,coord_i)
+                        task_type = 2
+                        res = [ngeom,tmp_dir,task_type,[i_mode,i_sign,
+                                                        j_mode,j_sign]]
+                        res_list.append(res)
 
-    #                     coord_j = ngeom.get_i_coord(j_coord)
-    #                     coord_j += j_incr
-    #                     ngeom.set_i_coord(j_coord,coord_j)
+                        counter += 1
 
-    #                     tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
-
-    #                     task_type = 2
-    #                     res = [ngeom,tmp_dir,task_type,[i_coord,int(np.sign(i_incr)),
-    #                                                     j_coord,int(np.sign(j_incr))]]
-    #                     res_list.append(res)
-
-    #                     counter += 1
-
-    #     return res_list
+        return res_list
 
     def calc(self,task_list,print_out=False):
         '''
@@ -179,11 +168,11 @@ class TaskManager(object):
             Ep = np.zeros((self.n_modes,nstates))
             Em = np.zeros((self.n_modes,nstates))
 
-        # if print_hess == True:
-        #     Upp = np.zeros((self.n_coords,self.n_coords,nstates))
-        #     Ump = np.zeros((self.n_coords,self.n_coords,nstates))
-        #     Upm = np.zeros((self.n_coords,self.n_coords,nstates))
-        #     Umm = np.zeros((self.n_coords,self.n_coords,nstates))
+        if print_hess == True:
+            Upp = np.zeros((self.n_modes,self.n_modes,nstates))
+            Ump = np.zeros((self.n_modes,self.n_modes,nstates))
+            Upm = np.zeros((self.n_modes,self.n_modes,nstates))
+            Umm = np.zeros((self.n_modes,self.n_modes,nstates))
 
         #loop over list of results
         for local_list in res_list:
@@ -200,23 +189,20 @@ class TaskManager(object):
                         Ep[i_mode] = energy
                     else:
                         Em[i_mode] = energy
-                # elif task_type == 2: #hessians
-                #     i_coord = result[2][0]
-                #     i_sign = result[2][1]
-                #     j_coord = result[2][2]
-                #     j_sign = result[2][3]
+                elif task_type == 2: #hessians
+                    i_mode = result[2][0]
+                    i_sign = result[2][1]
+                    j_mode = result[2][2]
+                    j_sign = result[2][3]
 
-                #     if(i_sign>0 and j_sign>0):
-                #         Upp[i_coord][j_coord] = energy
-                #     elif(i_sign>0 and j_sign<0):
-                #         Upm[i_coord][j_coord] = energy
-                #     elif(i_sign<0 and j_sign>0):
-                #         Ump[i_coord][j_coord] = energy
-                #     elif(i_sign<0 and j_sign<0):
-                #         Umm[i_coord][j_coord] = energy
-                #     #elif(i_sign==0 and j_sign==0):  #special case, z symmetry off-diagonal
-                #     #    Upm[i_coord][j_coord] = energy
-                #     #    Ump[i_coord][j_coord] = energy
+                    if(i_sign>0 and j_sign>0):
+                        Upp[i_mode][j_mode] = energy
+                    elif(i_sign>0 and j_sign<0):
+                        Upm[i_mode][j_mode] = energy
+                    elif(i_sign<0 and j_sign>0):
+                        Ump[i_mode][j_mode] = energy
+                    elif(i_sign<0 and j_sign<0):
+                        Umm[i_mode][j_mode] = energy
                 else:
                     energy_ref = energy
 
@@ -229,12 +215,12 @@ class TaskManager(object):
                 grad[i_mode] = (Ep[i_mode] - Em[i_mode]) / self.dd[i_mode]
 
         #calculate hessians
-        # if print_hess == True:
-        #     for i_coord in range(self.n_coords):
-        #         for j_coord in range(i_coord,self.n_coords):
-        #             hess[i_coord][j_coord] = (Upp[i_coord][j_coord] - Ump[i_coord][j_coord]
-        #                                      -Upm[i_coord][j_coord] + Umm[i_coord][j_coord]) / dx**2
-        #             #hessian matrix is symmetric
-        #             hess[j_coord][i_coord] = hess[i_coord][j_coord]
+        if print_hess == True:
+            for i_mode in range(self.n_modes):
+                for j_mode in range(i_mode,self.n_modes):
+                    hess[i_mode][j_mode] = (Upp[i_mode][j_mode] - Ump[i_mode][j_mode]
+                                           -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (self.dd[i_mode] * self.dd[j_mode])
+                    #hessian matrix is symmetric
+                    hess[j_mode][i_mode] = hess[i_mode][j_mode]
 
         return energy_ref, grad, hess

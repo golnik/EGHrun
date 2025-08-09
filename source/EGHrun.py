@@ -74,8 +74,8 @@ if __name__ == '__main__':
     p_optional.add_argument('--z_sym', action='store_true',
                         help='Indicate that molecule has z symmetry.')
 
-    p_optional.add_argument('-incr', type=float, default=1.e-3,
-                        help='Incriment for geometry displacements. (default: 1.e-3)')
+    p_optional.add_argument('-incr', type=float, default=1.e-2,
+                        help='Incriment for geometry displacements. (default: 1.e-2)')
 
     p_optional.add_argument('--print_script_out', action='store_true',
                         help='Print output produced by script (if any).')
@@ -159,8 +159,8 @@ if __name__ == '__main__':
             job_list_full += task_manager.get_task_ref_geom(ref_geom)
         if calc_force == True:   #create list of tasks for gradients
             job_list_full += task_manager.get_task_list_grad(ref_geom)
-        # if calc_hess == True:    #create list of tasks for hessians
-        #     job_list_full += task_manager.get_task_list_hess(ref_geom,incr=incr,z_sym=z_sym)
+        if calc_hess == True:    #create list of tasks for hessians
+            job_list_full += task_manager.get_task_list_hess(ref_geom)
 
         #calculation of numbers of jobs per node
         n_jobs_all = len(job_list_full)                         #total number of jobs
