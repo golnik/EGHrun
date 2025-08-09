@@ -3,12 +3,15 @@ import subprocess
 import numpy as np
 import os
 import argparse
+import copy
 
 from mpi4py import MPI
 
 from geometry import Geometry
 from input import Input
 from taskmanager import TaskManager
+
+bohr2A = 0.529177
 
 # Global error handler
 def global_except_hook(exctype, value, traceback):
@@ -123,8 +126,30 @@ if __name__ == '__main__':
     ref_geom.read_mol(geom_mol_fname)
     n_coords = len(ref_geom.coords)
 
+    #create list of "coordinates" that will be used for computing the derivatives
+    coords = [] #array of geometries specifying the displacements
+    dd     = [] #array of norms of the displacements' vectors
+
+    #case of xyz displacements
+    for i_mode in range(ref_geom.get_n_coords()):
+        ngeom = copy.deepcopy(ref_geom)
+
+        #set coordinates of all atoms to zero
+        for i_coord in range(ngeom.get_n_coords()):
+            ngeom.set_i_coord(i_coord,0.)
+
+        val = 1.*incr
+        ngeom.set_i_coord(i_mode,val)
+        coords.append(ngeom)
+
+        res = 0.
+        for i_coord in range(ngeom.get_n_coords()):
+            res += ngeom.get_i_coord(i_coord)**2
+        norm = 2. * np.sqrt(res) / bohr2A
+        dd.append(norm)
+
     #create task manager
-    task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname)
+    task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname,coords,dd)
 
     #prepare job list for calculations
     if mpi_rank == mpi_master:  #preparation is performed on master node
@@ -133,9 +158,9 @@ if __name__ == '__main__':
         if calc_energy == True:  #create task for reference geometry
             job_list_full += task_manager.get_task_ref_geom(ref_geom)
         if calc_force == True:   #create list of tasks for gradients
-            job_list_full += task_manager.get_task_list_grad(ref_geom,incr=incr,z_sym=z_sym)
-        if calc_hess == True:    #create list of tasks for hessians
-            job_list_full += task_manager.get_task_list_hess(ref_geom,incr=incr,z_sym=z_sym)
+            job_list_full += task_manager.get_task_list_grad(ref_geom)
+        # if calc_hess == True:    #create list of tasks for hessians
+        #     job_list_full += task_manager.get_task_list_hess(ref_geom,incr=incr,z_sym=z_sym)
 
         #calculation of numbers of jobs per node
         n_jobs_all = len(job_list_full)                         #total number of jobs

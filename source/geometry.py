@@ -43,6 +43,12 @@ class Geometry(object):
 
         inp_mol.close()
 
+    def print(self,stdout):
+        stdout.write("%s\n" % self.get_n_atoms())
+        for i_coord in range(self.get_n_coords()):
+            stdout.write("%s " %  self.get_i_coord(i_coord))
+        stdout.write("\n")
+
     def get_n_atoms(self):
         return len(self.atoms)
 
