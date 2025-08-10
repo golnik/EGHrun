@@ -66,6 +66,9 @@ if __name__ == '__main__':
                             help='Run script output file. (default: output.out)',
                             default="output.out")
 
+    p_optional.add_argument('-modes', nargs='?', type=str,
+                            help='File with displacements along which gradients and hessians will be evaluted.')
+
     p_optional.add_argument('--calc_grad', action='store_true',
                         help='Calculate gradients.')
     p_optional.add_argument('--calc_hess', action='store_true',
@@ -90,6 +93,8 @@ if __name__ == '__main__':
 
     EGH_out_fname = args.EGH_out              #EGH program output
     run_out_fname = args.run_out              #run script output
+
+    modes_fname = args.modes                  #file with coord displacements
 
     calc_energy = True                        #calculate reference energy
     calc_force  = args.calc_grad              #calculate gradients
@@ -120,31 +125,58 @@ if __name__ == '__main__':
                 (geom_xyz_fname,geom_mol_fname,
                  tmp_dir,
                  template_script_fname))
+        sys.stdout.flush()
 
     ref_geom = Geometry()
     ref_geom.read_xyz(geom_xyz_fname)
     ref_geom.read_mol(geom_mol_fname)
     n_coords = len(ref_geom.coords)
 
+    n_coords = ref_geom.get_n_coords()
+
     #create list of "coordinates" that will be used for computing the derivatives
     coords = [] #array of geometries specifying the displacements
     dd     = [] #array of norms of the displacements' vectors
 
     #case of xyz displacements
-    for i_mode in range(ref_geom.get_n_coords()):
-        ngeom = copy.deepcopy(ref_geom)
+    if modes_fname is None:
+        for i_mode in range(n_coords):
+            ngeom = copy.deepcopy(ref_geom)
 
-        #set coordinates of all atoms to zero
-        for i_coord in range(ngeom.get_n_coords()):
-            ngeom.set_i_coord(i_coord,0.)
+            #set coordinates of all atoms to zero
+            for i_coord in range(n_coords):
+                ngeom.set_i_coord(i_coord,0.)
 
-        val = 1.*incr
-        ngeom.set_i_coord(i_mode,val)
-        coords.append(ngeom)
+            val = 1.*incr
+            ngeom.set_i_coord(i_mode,val)
+            coords.append(ngeom)
+    else:
+        with open(modes_fname,'r') as file:
+            for line in file:
+                data = line.split()
+                
+                N = len(data)  #get number of elements in the line
+                if N != (n_coords+1):
+                    raise ValueError("Number of elements in each line of modes file must by 3*N + 1!")
+                
+                ngeom = copy.deepcopy(ref_geom)
 
+                w = float(data[0])
+
+                #loop over coordinates in mode
+                for i_coord in range(n_coords):
+                    val = incr * w * float(data[i_coord+1])
+                    ngeom.set_i_coord(i_coord,val)
+
+                coords.append(ngeom)
+
+    #generate norms of displacement vector
+    n_modes = len(coords)
+    for i_mode in range(n_modes):
         res = 0.
-        for i_coord in range(ngeom.get_n_coords()):
-            res += ngeom.get_i_coord(i_coord)**2
+        for i_coord in range(n_coords):
+            res += coords[i_mode].get_i_coord(i_coord)**2
+
         norm = 2. * np.sqrt(res) / bohr2A
         dd.append(norm)
 
