@@ -55,9 +55,9 @@ if __name__ == '__main__':
 
     p_optional = parser.add_argument_group('optional arguments')
 
-    p_optional.add_argument('-EGH_out', nargs='?', type=argparse.FileType('w'),
+    p_optional.add_argument('-EGH_out', nargs='?', type=str,
                             help='EGH output file. (default: print to stdout)',
-                            default=sys.stdout)
+                            default="EGH.out")
 
     p_optional.add_argument('-run_out', nargs='?', type=str,
                             help='Run script output file. (default: output.out)',
@@ -121,6 +121,7 @@ if __name__ == '__main__':
     ref_geom = Geometry()
     ref_geom.read_xyz(geom_xyz_fname)
     ref_geom.read_mol(geom_mol_fname)
+    n_coords = len(ref_geom.coords)
 
     #create task manager
     task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname)
@@ -189,9 +190,24 @@ if __name__ == '__main__':
 
     if mpi_rank == mpi_master:
         #analyze results
-        out_str = task_manager.analyze(results_all, nstates,
+        energy, grad, hess = task_manager.analyze(results_all, nstates,
             print_energy=calc_energy,print_grad=calc_force,print_hess=calc_hess)
 
-        #print output
-        EGH_out_fname.write(out_str)
-        EGH_out_fname.close()
+        with open(EGH_out_fname,'w') as outfile:
+            for ist in range(nstates):
+                if calc_energy == True:
+                    outfile.write("$energy\n")
+                    outfile.write("%15.8f\n" % energy[ist])
+
+                if calc_force == True:
+                    outfile.write("$gradient\n")
+                    for i_coord in range(n_coords):
+                        outfile.write("%15.8f" % grad[i_coord][ist])
+                    outfile.write("\n")
+
+                if calc_hess == True:
+                    outfile.write("$hessian\n")
+                    for i_coord in range(n_coords):
+                        for j_coord in range(n_coords):
+                            outfile.write("%15.8f" % hess[i_coord][j_coord][ist])
+                        outfile.write("\n")

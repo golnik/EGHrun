@@ -225,15 +225,16 @@ class TaskManager(object):
             A2bohr = 1.88973
             dx = 2. * self.incr * A2bohr
 
+        grad = np.zeros((self.n_coords,nstates))
+        hess = np.zeros((self.n_coords,self.n_coords,nstates))
+
         #calculate gradients
-        if print_grad == True:
-            grad = np.zeros((self.n_coords,nstates))
+        if print_grad == True:    
             for i_coord in range(self.n_coords):
                 grad[i_coord] = (Ep[i_coord] - Em[i_coord]) / dx
 
         #calculate hessians
-        if print_hess == True:
-            hess = np.zeros((self.n_coords,self.n_coords,nstates))
+        if print_hess == True:    
             for i_coord in range(self.n_coords):
                 for j_coord in range(i_coord,self.n_coords):
                     hess[i_coord][j_coord] = (Upp[i_coord][j_coord] - Ump[i_coord][j_coord]
@@ -241,26 +242,4 @@ class TaskManager(object):
                     #hessian matrix is symmetric
                     hess[j_coord][i_coord] = hess[i_coord][j_coord]
 
-        #output
-        out_str = ''
-
-        for ist in range(nstates):
-            if print_energy == True:
-                out_str += "$energy\n  "
-                out_str += "%s\n" % energy_ref[ist]
-
-            if print_grad == True:
-                out_str += "$gradient\n  "
-                for i_coord in range(self.n_coords):
-                    out_str += "%s " % grad[i_coord][ist]
-                out_str += "\n"
-
-            if print_hess == True:
-                out_str += "$hessian\n"
-                for i_coord in range(self.n_coords):
-                    out_str += "  "
-                    for j_coord in range(self.n_coords):
-                        out_str += "%s " % hess[i_coord][j_coord][ist]
-                    out_str += "\n"
-
-        return out_str
+        return energy_ref, grad, hess
