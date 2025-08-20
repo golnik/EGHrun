@@ -110,6 +110,7 @@ class TaskManager(object):
         This function runs calculations for specified task list.
         '''
         res_list = []   #list to store results
+        nstates  = 0    #number of electronic states
 
         #loop over tasks in list
         for task in task_list:
@@ -153,10 +154,10 @@ class TaskManager(object):
 
             #read output file
             reader = Reader()
-            energy = reader.get_energy(run_out_str)  #get calculated energy
+            energies, states = reader.get_energy(run_out_str)  #get calculated energies
 
             #result list
-            res = [energy,task_type]
+            res = [energies,task_type]
 
             #add aditional arguments to result list
             if task_type != 0:
@@ -167,26 +168,26 @@ class TaskManager(object):
 
             res_list.append(res)
 
-        return res_list
+        return res_list, states
 
-    def analyze(self,res_list,print_energy=True,print_grad=True,print_hess=True):
-        energy_ref = 0.
+    def analyze(self,res_list,nstates,print_energy=True,print_grad=True,print_hess=True):
+        energy_ref = np.zeros(nstates)
 
         if print_grad == True:
-            Ep = np.zeros(self.n_coords)
-            Em = np.zeros(self.n_coords)
+            Ep = np.zeros((self.n_coords,nstates))
+            Em = np.zeros((self.n_coords,nstates))
 
         if print_hess == True:
-            Upp = np.zeros((self.n_coords,self.n_coords))
-            Ump = np.zeros((self.n_coords,self.n_coords))
-            Upm = np.zeros((self.n_coords,self.n_coords))
-            Umm = np.zeros((self.n_coords,self.n_coords))
+            Upp = np.zeros((self.n_coords,self.n_coords,nstates))
+            Ump = np.zeros((self.n_coords,self.n_coords,nstates))
+            Upm = np.zeros((self.n_coords,self.n_coords,nstates))
+            Umm = np.zeros((self.n_coords,self.n_coords,nstates))
 
         #loop over list of results
         for local_list in res_list:
             #loop over results in a particular list
             for result in local_list:
-                energy = result[0]      #get energy
+                energy = result[0]      #get energies
                 task_type = result[1]   #get task type
 
                 if task_type == 1:   #gradients
@@ -223,15 +224,16 @@ class TaskManager(object):
             A2bohr = 1.88973
             dx = 2. * self.incr * A2bohr
 
+        grad = np.zeros((self.n_coords,nstates))
+        hess = np.zeros((self.n_coords,self.n_coords,nstates))
+
         #calculate gradients
-        if print_grad == True:
-            grad = np.zeros(self.n_coords)
+        if print_grad == True:    
             for i_coord in range(self.n_coords):
                 grad[i_coord] = (Ep[i_coord] - Em[i_coord]) / dx
 
         #calculate hessians
-        if print_hess == True:
-            hess = np.zeros((self.n_coords,self.n_coords))
+        if print_hess == True:    
             for i_coord in range(self.n_coords):
                 for j_coord in range(i_coord,self.n_coords):
                     hess[i_coord][j_coord] = (Upp[i_coord][j_coord] - Ump[i_coord][j_coord]
@@ -239,25 +241,4 @@ class TaskManager(object):
                     #hessian matrix is symmetric
                     hess[j_coord][i_coord] = hess[i_coord][j_coord]
 
-        #output
-        out_str = ''
-
-        if print_energy == True:
-            out_str += "$energy\n  "
-            out_str += "%s\n" % energy_ref
-
-        if print_grad == True:
-            out_str += "$gradient\n  "
-            for i_coord in range(self.n_coords):
-                out_str += "%s " % grad[i_coord]
-            out_str += "\n"
-
-        if print_hess == True:
-            out_str += "$hessian\n"
-            for i_coord in range(self.n_coords):
-                out_str += "  "
-                for j_coord in range(self.n_coords):
-                    out_str += "%s " % hess[i_coord][j_coord]
-                out_str += "\n"
-
-        return out_str
+        return energy_ref, grad, hess
