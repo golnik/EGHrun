@@ -170,12 +170,17 @@ if __name__ == '__main__':
                 coords.append(ngeom)
 
     #generate norms of displacement vector
+    masses = ngeom.atomic_masses
+    Na = len(masses)    
     n_modes = len(coords)
     for i_mode in range(n_modes):
-        res = 0.
-        for i_coord in range(n_coords):
-            res += coords[i_mode].get_i_coord(i_coord)**2
-
+        res = 0.                
+        indx = 0
+        for ia in range(Na):
+            for ixyz in range(3):
+                res += (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # remove mass scaling from normal modes
+                indx += 1
+                
         norm = 2. * np.sqrt(res) / bohr2A
         dd.append(norm)
 
