@@ -6,12 +6,19 @@ class Reader(object):
         pass
 
     def get_energy(self, string):
-        energy_pattern = r'[^\S\r\n]*\$energy(?:\d+)?\s+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)$'
+        energy_pattern = r'[^\S\r\n]*\$energy(?:\_)?(\w+)?\s+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)$'
         energy_regex = re.compile(energy_pattern,re.IGNORECASE|re.MULTILINE)
 
         energies = []
+        states   = []
         for match in re.finditer(energy_regex, string):
-            energy = float(match.group(1))
+            if len(match.groups()) == 2:
+                energy = float(match.group(1))
+            elif len(match.groups()) == 3:
+                state  = match.group(1)
+                energy = float(match.group(2))
+                states.append(state)
+
             energies.append(energy)
 
-        return energies
+        return energies, states

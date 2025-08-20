@@ -154,8 +154,7 @@ class TaskManager(object):
 
             #read output file
             reader = Reader()
-            energies = reader.get_energy(run_out_str)  #get calculated energies
-            nstates = len(energies)
+            energies, states = reader.get_energy(run_out_str)  #get calculated energies
 
             #result list
             res = [energies,task_type]
@@ -169,7 +168,7 @@ class TaskManager(object):
 
             res_list.append(res)
 
-        return res_list, nstates
+        return res_list, states
 
     def analyze(self,res_list,nstates,print_energy=True,print_grad=True,print_hess=True):
         energy_ref = np.zeros(nstates)

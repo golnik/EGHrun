@@ -183,7 +183,8 @@ if __name__ == '__main__':
     local_job_list = mpi_comm.scatter(job_list,root=mpi_master)
 
     #perform calculations
-    local_results, nstates = task_manager.calc(local_job_list,print_script_out)
+    local_results, states = task_manager.calc(local_job_list,print_script_out)
+    nstates = len(states)
 
     #collect results from all processes
     results_all = mpi_comm.gather(local_results)
@@ -193,8 +194,11 @@ if __name__ == '__main__':
         energy, grad, hess = task_manager.analyze(results_all, nstates,
             print_energy=calc_energy,print_grad=calc_force,print_hess=calc_hess)
 
-        with open(EGH_out_fname,'w') as outfile:
-            for ist in range(nstates):
+        for ist in range(nstates):
+            state_str = states[ist]
+            fname = "%s.%s" % (EGH_out_fname,state_str)
+
+            with open(fname,'w') as outfile:
                 if calc_energy == True:
                     outfile.write("$energy\n")
                     outfile.write("%15.8f\n" % energy[ist])
