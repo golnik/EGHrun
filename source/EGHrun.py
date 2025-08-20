@@ -11,7 +11,10 @@ from geometry import Geometry
 from input import Input
 from taskmanager import TaskManager
 
-bohr2A = 0.529177
+bohr2A  = 0.529177
+au2eV   = 27.211386
+au2cm_1 = 219474.6313705
+c = 137.035999
 
 # Global error handler
 def global_except_hook(exctype, value, traceback):
@@ -160,11 +163,12 @@ if __name__ == '__main__':
                 
                 ngeom = copy.deepcopy(ref_geom)
 
-                w = float(data[0])
+                w = float(data[0])/au2cm_1  #convert normal modes frequency to au
+                d = 1. #np.sqrt(1./(4. * np.pi**2 * c * w))
 
                 #loop over coordinates in mode
                 for i_coord in range(n_coords):
-                    val = incr * w * float(data[i_coord+1])
+                    val = incr * d * float(data[i_coord+1])
                     ngeom.set_i_coord(i_coord,val)
 
                 coords.append(ngeom)
