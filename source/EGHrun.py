@@ -182,14 +182,14 @@ if __name__ == '__main__':
     local_job_list = mpi_comm.scatter(job_list,root=mpi_master)
 
     #perform calculations
-    local_results = task_manager.calc(local_job_list,print_script_out)
+    local_results, nstates = task_manager.calc(local_job_list,print_script_out)
 
     #collect results from all processes
     results_all = mpi_comm.gather(local_results)
 
     if mpi_rank == mpi_master:
         #analyze results
-        out_str = task_manager.analyze(results_all,
+        out_str = task_manager.analyze(results_all, nstates,
             print_energy=calc_energy,print_grad=calc_force,print_hess=calc_hess)
 
         #print output
