@@ -130,7 +130,6 @@ if __name__ == '__main__':
     ref_geom = Geometry()
     ref_geom.read_xyz(geom_xyz_fname)
     ref_geom.read_mol(geom_mol_fname)
-    n_coords = len(ref_geom.coords)
 
     n_coords = ref_geom.get_n_coords()
 
@@ -262,13 +261,13 @@ if __name__ == '__main__':
 
                 if calc_force == True:
                     outfile.write("$gradient\n")
-                    for i_coord in range(n_coords):
-                        outfile.write("%15.8f" % grad[i_coord][ist])
+                    for i_mode in range(n_modes):
+                        outfile.write("%15.8f" % grad[i_mode][ist])
                     outfile.write("\n")
 
                 if calc_hess == True:
                     outfile.write("$hessian\n")
-                    for i_coord in range(n_coords):
-                        for j_coord in range(n_coords):
-                            outfile.write("%15.8f" % hess[i_coord][j_coord][ist])
+                    for i_mode in range(n_modes):
+                        for j_mode in range(n_modes):
+                            outfile.write("%15.8f" % hess[i_mode][j_mode][ist])
                         outfile.write("\n")
