@@ -3,12 +3,18 @@ import subprocess
 import numpy as np
 import os
 import argparse
+import copy
 
 from mpi4py import MPI
 
 from geometry import Geometry
 from input import Input
 from taskmanager import TaskManager
+
+bohr2A  = 0.529177
+au2eV   = 27.211386
+au2cm_1 = 219474.6313705
+c = 137.035999
 
 # Global error handler
 def global_except_hook(exctype, value, traceback):
@@ -63,6 +69,9 @@ if __name__ == '__main__':
                             help='Run script output file. (default: output.out)',
                             default="output.out")
 
+    p_optional.add_argument('-modes', nargs='?', type=str,
+                            help='File with displacements along which gradients and hessians will be evaluted.')
+
     p_optional.add_argument('--calc_grad', action='store_true',
                         help='Calculate gradients.')
     p_optional.add_argument('--calc_hess', action='store_true',
@@ -71,8 +80,8 @@ if __name__ == '__main__':
     p_optional.add_argument('--z_sym', action='store_true',
                         help='Indicate that molecule has z symmetry.')
 
-    p_optional.add_argument('-incr', type=float, default=1.e-3,
-                        help='Incriment for geometry displacements. (default: 1.e-3)')
+    p_optional.add_argument('-incr', type=float, default=1.e-2,
+                        help='Incriment for geometry displacements. (default: 1.e-2)')
 
     p_optional.add_argument('--print_script_out', action='store_true',
                         help='Print output produced by script (if any).')
@@ -87,6 +96,8 @@ if __name__ == '__main__':
 
     EGH_out_fname = args.EGH_out              #EGH program output
     run_out_fname = args.run_out              #run script output
+
+    modes_fname = args.modes                  #file with coord displacements
 
     calc_energy = True                        #calculate reference energy
     calc_force  = args.calc_grad              #calculate gradients
@@ -117,14 +128,68 @@ if __name__ == '__main__':
                 (geom_xyz_fname,geom_mol_fname,
                  tmp_dir,
                  template_script_fname))
+        sys.stdout.flush()
 
     ref_geom = Geometry()
     ref_geom.read_xyz(geom_xyz_fname)
     ref_geom.read_mol(geom_mol_fname)
-    n_coords = len(ref_geom.coords)
+
+    n_coords = ref_geom.get_n_coords()
+
+    #create list of "coordinates" that will be used for computing the derivatives
+    coords = [] #array of geometries specifying the displacements
+    dd     = [] #array of norms of the displacements' vectors
+
+    #case of xyz displacements
+    if modes_fname is None:
+        for i_mode in range(n_coords):
+            ngeom = copy.deepcopy(ref_geom)
+
+            #set coordinates of all atoms to zero
+            for i_coord in range(n_coords):
+                ngeom.set_i_coord(i_coord,0.)
+
+            val = 1.*incr
+            ngeom.set_i_coord(i_mode,val)
+            coords.append(ngeom)
+    else:
+        with open(modes_fname,'r') as file:
+            for line in file:
+                data = line.split()
+                
+                N = len(data)  #get number of elements in the line
+                if N != (n_coords+1):
+                    raise ValueError("Number of elements in each line of modes file must by 3*N + 1!")
+                
+                ngeom = copy.deepcopy(ref_geom)
+
+                w = float(data[0])/au2cm_1  #convert normal modes frequency to au
+                d = 1. #np.sqrt(1./(4. * np.pi**2 * c * w))
+
+                #loop over coordinates in mode
+                for i_coord in range(n_coords):
+                    val = incr * d * float(data[i_coord+1])
+                    ngeom.set_i_coord(i_coord,val)
+
+                coords.append(ngeom)
+
+    #generate norms of displacement vector
+    masses = ngeom.atomic_masses
+    Na = len(masses)    
+    n_modes = len(coords)
+    for i_mode in range(n_modes):
+        res = 0.                
+        indx = 0
+        for ia in range(Na):
+            for ixyz in range(3):
+                res += (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # remove mass scaling from normal modes
+                indx += 1
+                
+        norm = 2. * np.sqrt(res) / bohr2A
+        dd.append(norm)
 
     #create task manager
-    task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname)
+    task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname,coords,dd)
 
     #prepare job list for calculations
     if mpi_rank == mpi_master:  #preparation is performed on master node
@@ -133,9 +198,9 @@ if __name__ == '__main__':
         if calc_energy == True:  #create task for reference geometry
             job_list_full += task_manager.get_task_ref_geom(ref_geom)
         if calc_force == True:   #create list of tasks for gradients
-            job_list_full += task_manager.get_task_list_grad(ref_geom,incr=incr,z_sym=z_sym)
+            job_list_full += task_manager.get_task_list_grad(ref_geom)
         if calc_hess == True:    #create list of tasks for hessians
-            job_list_full += task_manager.get_task_list_hess(ref_geom,incr=incr,z_sym=z_sym)
+            job_list_full += task_manager.get_task_list_hess(ref_geom)
 
         #calculation of numbers of jobs per node
         n_jobs_all = len(job_list_full)                         #total number of jobs
@@ -205,13 +270,13 @@ if __name__ == '__main__':
 
                 if calc_force == True:
                     outfile.write("$gradient\n")
-                    for i_coord in range(n_coords):
-                        outfile.write("%15.8f" % grad[i_coord][ist])
+                    for i_mode in range(n_modes):
+                        outfile.write("%15.8f" % grad[i_mode][ist])
                     outfile.write("\n")
 
                 if calc_hess == True:
                     outfile.write("$hessian\n")
-                    for i_coord in range(n_coords):
-                        for j_coord in range(n_coords):
-                            outfile.write("%15.8f" % hess[i_coord][j_coord][ist])
+                    for i_mode in range(n_modes):
+                        for j_mode in range(n_modes):
+                            outfile.write("%15.8f" % hess[i_mode][j_mode][ist])
                         outfile.write("\n")
