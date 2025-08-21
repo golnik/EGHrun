@@ -182,7 +182,13 @@ if __name__ == '__main__':
         indx = 0
         for ia in range(Na):
             for ixyz in range(3):
-                res += (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # remove mass scaling from normal modes
+                val = 0.
+                if modes_fname is None:
+                    val = coords[i_mode].get_i_coord(indx)**2
+                else:
+                    val = (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # remove mass scaling from normal modes
+
+                res += val
                 indx += 1
                 
         norm = 2. * np.sqrt(res) / bohr2A
