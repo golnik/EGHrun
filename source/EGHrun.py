@@ -191,7 +191,7 @@ if __name__ == '__main__':
                 res += val
                 indx += 1
                 
-        norm = 2. * np.sqrt(res) / bohr2A
+        norm = np.sqrt(res) / bohr2A
         dd.append(norm)
 
     #create task manager

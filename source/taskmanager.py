@@ -6,8 +6,13 @@ import os
 from input import Input
 from reader import Reader
 
-sd_displacements = [-2,-1,0,+1,+2]
-sd_coeffs  = [-1./12.,4./3.,-5./2.,4./3.,-1./12.]
+#sd_displacements = [-1,0,+1]
+#sd_coeffs  = [1.,-2.,1.]
+#sd_displacements = [-2,-1,0,+1,+2]
+#sd_coeffs  = [-1./12.,4./3.,-5./2.,4./3.,-1./12.]
+sd_displacements = [-3,-2,-1,0,+1,+2,+3]
+sd_coeffs  = [1./90.,-3./20.,3./2.,-49./18.,3./2.,-3./20.,1./90.]
+
 sd_ncoeffs = np.size(sd_displacements)
 
 class TaskManager(object):
@@ -240,19 +245,20 @@ class TaskManager(object):
         #calculate gradients
         if print_grad == True:
             for i_mode in range(self.n_modes):
-                grad[i_mode] = (Ep[i_mode] - Em[i_mode]) / self.dd[i_mode]
+                grad[i_mode] = (Ep[i_mode] - Em[i_mode]) / (2. * self.dd[i_mode])
 
         #calculate hessians
         if print_hess == True:
             for i_mode in range(self.n_modes):
                 for j_mode in range(i_mode,self.n_modes):
-                    if i_mode == j_mode:
+                    if i_mode == j_mode:    #diagonal portion of the hessian
                         hess[i_mode][j_mode] = 0.
                         for indx in range(sd_ncoeffs):
                             hess[i_mode][j_mode] += sd_coeffs[indx] * Udiag[i_mode][indx]
-                    else:
+                        hess[i_mode][j_mode] *= 1./self.dd[i_mode]**2
+                    else:                   #off-diagonal
                         hess[i_mode][j_mode] = (Upp[i_mode][j_mode] - Ump[i_mode][j_mode]
-                                               -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (self.dd[i_mode] * self.dd[j_mode])
+                                               -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (2. * self.dd[i_mode] * 2. * self.dd[j_mode])
                     #hessian matrix is symmetric
                     hess[j_mode][i_mode] = hess[i_mode][j_mode]
 
