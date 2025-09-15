@@ -6,6 +6,15 @@ import os
 from input import Input
 from reader import Reader
 
+#sd_displacements = [-1,0,+1]
+#sd_coeffs  = [1.,-2.,1.]
+#sd_displacements = [-2,-1,0,+1,+2]
+#sd_coeffs  = [-1./12.,4./3.,-5./2.,4./3.,-1./12.]
+sd_displacements = [-3,-2,-1,0,+1,+2,+3]
+sd_coeffs  = [1./90.,-3./20.,3./2.,-49./18.,3./2.,-3./20.,1./90.]
+
+sd_ncoeffs = np.size(sd_displacements)
+
 class TaskManager(object):
     def __init__(self,tmp_dir,template_script_fname,run_out_fname,modes,dd):
         '''
@@ -69,9 +78,8 @@ class TaskManager(object):
         #loop over modes
         for i_mode in range(self.n_modes):
             for j_mode in range(i_mode,self.n_modes):
-                #loop over plus and minus increment
-                for i_sign in [-1,+1]:
-                    for j_sign in [-1,+1]:
+                if i_mode == j_mode:    #diagonal portion of the hessian
+                    for i_sign in sd_displacements:
                         ngeom = copy.deepcopy(geom)
 
                         #loop over coordinates within mode
@@ -80,19 +88,38 @@ class TaskManager(object):
                             coord += i_sign * self.modes[i_mode].get_i_coord(i_coord)
                             ngeom.set_i_coord(i_coord,coord)
 
-                        for j_coord in range(ngeom.get_n_coords()):
-                            coord = ngeom.get_i_coord(j_coord)
-                            coord += j_sign * self.modes[j_mode].get_i_coord(j_coord)
-                            ngeom.set_i_coord(j_coord,coord)
-
                         tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
 
-                        task_type = 2
-                        res = [ngeom,tmp_dir,task_type,[i_mode,i_sign,
-                                                        j_mode,j_sign]]
+                        task_type = 3
+                        res = [ngeom,tmp_dir,task_type,[i_mode,i_sign]]
                         res_list.append(res)
 
                         counter += 1
+                else:
+                    #loop over plus and minus increment
+                    for i_sign in [-1,+1]:
+                        for j_sign in [-1,+1]:
+                            ngeom = copy.deepcopy(geom)
+
+                            #loop over coordinates within mode
+                            for i_coord in range(ngeom.get_n_coords()):
+                                coord = ngeom.get_i_coord(i_coord)
+                                coord += i_sign * self.modes[i_mode].get_i_coord(i_coord)
+                                ngeom.set_i_coord(i_coord,coord)
+
+                            for j_coord in range(ngeom.get_n_coords()):
+                                coord = ngeom.get_i_coord(j_coord)
+                                coord += j_sign * self.modes[j_mode].get_i_coord(j_coord)
+                                ngeom.set_i_coord(j_coord,coord)
+
+                            tmp_dir = os.path.join(self.tmp_dir,"hess_%s"%counter)
+
+                            task_type = 2
+                            res = [ngeom,tmp_dir,task_type,[i_mode,i_sign,
+                                                            j_mode,j_sign]]
+                            res_list.append(res)
+
+                            counter += 1
 
         return res_list
 
@@ -173,6 +200,7 @@ class TaskManager(object):
             Ump = np.zeros((self.n_modes,self.n_modes,nstates))
             Upm = np.zeros((self.n_modes,self.n_modes,nstates))
             Umm = np.zeros((self.n_modes,self.n_modes,nstates))
+            Udiag = np.zeros((self.n_modes,sd_ncoeffs,nstates))
 
         #loop over list of results
         for local_list in res_list:
@@ -189,7 +217,7 @@ class TaskManager(object):
                         Ep[i_mode] = energy
                     else:
                         Em[i_mode] = energy
-                elif task_type == 2: #hessians
+                elif task_type == 2: #off-diagonal hessian elements
                     i_mode = result[2][0]
                     i_sign = result[2][1]
                     j_mode = result[2][2]
@@ -203,6 +231,11 @@ class TaskManager(object):
                         Ump[i_mode][j_mode] = energy
                     elif(i_sign<0 and j_sign<0):
                         Umm[i_mode][j_mode] = energy
+                elif task_type == 3: #diagonal portion of the hessian
+                    i_mode = result[2][0]
+                    i_sign = result[2][1]
+                    indx = sd_displacements.index(i_sign)
+                    Udiag[i_mode][indx] = energy
                 else:
                     energy_ref = energy
 
@@ -212,14 +245,20 @@ class TaskManager(object):
         #calculate gradients
         if print_grad == True:
             for i_mode in range(self.n_modes):
-                grad[i_mode] = (Ep[i_mode] - Em[i_mode]) / self.dd[i_mode]
+                grad[i_mode] = (Ep[i_mode] - Em[i_mode]) / (2. * self.dd[i_mode])
 
         #calculate hessians
         if print_hess == True:
             for i_mode in range(self.n_modes):
                 for j_mode in range(i_mode,self.n_modes):
-                    hess[i_mode][j_mode] = (Upp[i_mode][j_mode] - Ump[i_mode][j_mode]
-                                           -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (self.dd[i_mode] * self.dd[j_mode])
+                    if i_mode == j_mode:    #diagonal portion of the hessian
+                        hess[i_mode][j_mode] = 0.
+                        for indx in range(sd_ncoeffs):
+                            hess[i_mode][j_mode] += sd_coeffs[indx] * Udiag[i_mode][indx]
+                        hess[i_mode][j_mode] *= 1./self.dd[i_mode]**2
+                    else:                   #off-diagonal
+                        hess[i_mode][j_mode] = (Upp[i_mode][j_mode] - Ump[i_mode][j_mode]
+                                               -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (2. * self.dd[i_mode] * 2. * self.dd[j_mode])
                     #hessian matrix is symmetric
                     hess[j_mode][i_mode] = hess[i_mode][j_mode]
 
