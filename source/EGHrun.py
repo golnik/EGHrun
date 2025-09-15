@@ -165,6 +165,7 @@ if __name__ == '__main__':
 
                 w = float(data[0])/au2cm_1  #convert normal modes frequency to au
                 d = 1. #np.sqrt(1./(4. * np.pi**2 * c * w))
+                d = 1./(float(data[0])*(.53*10**-8))*(10**-5)
 
                 #loop over coordinates in mode
                 for i_coord in range(n_coords):
