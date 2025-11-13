@@ -6,12 +6,12 @@ import os
 from input import Input
 from reader import Reader
 
-#sd_displacements = [-1,0,+1]
-#sd_coeffs  = [1.,-2.,1.]
+sd_displacements = [-1,0,+1]
+sd_coeffs  = [1.,-2.,1.]
 #sd_displacements = [-2,-1,0,+1,+2]
 #sd_coeffs  = [-1./12.,4./3.,-5./2.,4./3.,-1./12.]
-sd_displacements = [-3,-2,-1,0,+1,+2,+3]
-sd_coeffs  = [1./90.,-3./20.,3./2.,-49./18.,3./2.,-3./20.,1./90.]
+#sd_displacements = [-3,-2,-1,0,+1,+2,+3]
+#sd_coeffs  = [1./90.,-3./20.,3./2.,-49./18.,3./2.,-3./20.,1./90.]
 
 sd_ncoeffs = np.size(sd_displacements)
 
