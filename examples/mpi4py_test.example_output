@@ -1,0 +1,42 @@
+
+     active environment : mpienv
+    active env location : /home/ngolubev/.conda/envs/mpienv
+            shell level : 9
+       user config file : /home/ngolubev/.condarc
+ populated config files : 
+          conda version : 23.3.1
+    conda-build version : 3.24.0
+         python version : 3.10.9.final.0
+       virtual packages : __archspec=1=x86_64
+                          __glibc=2.36=0
+                          __linux=6.1.0=0
+                          __unix=0=0
+       base environment : /software/apps/anaconda/2023.03  (read only)
+      conda av data dir : /software/apps/anaconda/2023.03/etc/conda
+  conda av metadata url : None
+           channel URLs : https://repo.anaconda.com/pkgs/main/linux-64
+                          https://repo.anaconda.com/pkgs/main/noarch
+                          https://repo.anaconda.com/pkgs/r/linux-64
+                          https://repo.anaconda.com/pkgs/r/noarch
+          package cache : /software/apps/anaconda/2023.03/pkgs
+                          /home/ngolubev/.conda/pkgs
+       envs directories : /home/ngolubev/.conda/envs
+                          /software/apps/anaconda/2023.03/envs
+               platform : linux-64
+             user-agent : conda/23.3.1 requests/2.28.1 CPython/3.10.9 Linux/6.1.0-32-rt-amd64 debian/12 glibc/2.36
+                UID:GID : 1000003:1000001
+             netrc file : None
+           offline mode : False
+
+/software/apps/anaconda/2024.02/bin//python
+/software/apps/openmpi/4.1.5/gcc8.5.0/bin//mpirun
+Hello World! I am process 7 of 10 on ltamp08.
+Hello World! I am process 9 of 10 on ltamp08.
+Hello World! I am process 3 of 10 on ltamp08.
+Hello World! I am process 4 of 10 on ltamp08.
+Hello World! I am process 0 of 10 on ltamp08.
+Hello World! I am process 1 of 10 on ltamp08.
+Hello World! I am process 5 of 10 on ltamp08.
+Hello World! I am process 6 of 10 on ltamp08.
+Hello World! I am process 8 of 10 on ltamp08.
+Hello World! I am process 2 of 10 on ltamp08.
