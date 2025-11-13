@@ -1,0 +1,49 @@
+#!/bin/bash
+
+module add openmolcas/23.06/gcc12.3.0
+
+export WorkDir=`echo $(mktemp -d)`
+mkdir -p $WorkDir
+
+#create temporary directory
+mkdir -p %TMP_DIR
+cd %TMP_DIR
+
+geometry_str=$(cat <<-END
+$geometry{
+ %AL %X %Y %Z
+};
+END
+)
+
+Natoms=`echo "$geometry_str" | sed -re '/^$/d' | wc -l`
+
+#prepare molcas input
+cat << EOF > molcas.inp
+&GATEWAY
+COORD
+$Natoms
+comment line
+$geometry_str
+basis=STO-3G
+group=C1
+
+&SEWARD
+
+&SCF
+
+&RASSCF
+EOF
+
+pymolcas molcas.inp > molcas.out
+
+E_HF=`cat molcas.out | grep "Total SCF energy" | awk '{print $5}'`
+E_CAS=`cat molcas.out | grep "RASSCF energy for state  1" | awk '{print $6}'`
+
+#print output file
+cat <<- EOF > %RUN_OUT
+\$energy_HF
+ $E_HF
+\$energy_CAS
+ $E_CAS
+EOF
