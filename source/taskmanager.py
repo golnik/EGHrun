@@ -170,7 +170,7 @@ class TaskManager(object):
             except:
                 raise Exception("File %s with energy output is not found." % run_out_fname)
 
-            #read output file
+            #read output files
             reader = Reader()
             energies, states = reader.get_energy(run_out_str)  #get calculated energies
 
@@ -235,6 +235,8 @@ class TaskManager(object):
                     i_mode = result[2][0]
                     i_sign = result[2][1]
                     indx = sd_displacements.index(i_sign)
+                    print("energy for Udiag: ", energy)
+                    print("Udiag: ", Udiag[i_mode][indx] )
                     Udiag[i_mode][indx] = energy
                 else:
                     energy_ref = energy
@@ -256,6 +258,49 @@ class TaskManager(object):
                         for indx in range(sd_ncoeffs):
                             hess[i_mode][j_mode] += sd_coeffs[indx] * Udiag[i_mode][indx]
                         hess[i_mode][j_mode] *= 1./self.dd[i_mode]**2
+                        
+                        ## try a least squares regression
+                        A = np.zeros((3,3,nstates))
+                        v = np.zeros((3,1,nstates))
+                        print("A: ",A)
+                        print("v: ",v)
+                        print("self.dd[i_mode]: ",self.dd[i_mode])
+                        for indx in range(sd_ncoeffs):
+                            dh=indx-((sd_ncoeffs-1)/2)
+                            print("dh: ",dh)
+                            A[0,0,:]+=1
+                            A[0,1,:]+=self.dd[i_mode]*dh
+                            A[0,2,:]+=(self.dd[i_mode]**2)*(dh**2)
+                            A[1,2,:]+=(self.dd[i_mode]**3)*(dh**3)
+                            A[2,2,:]+=(self.dd[i_mode]**4)*(dh**4)
+                            
+                            print("Udiag[i_mode][indx]: ",Udiag[i_mode][indx])
+                            v[0,0,:]+=Udiag[i_mode][indx]
+                            v[1,0,:]+=Udiag[i_mode][indx]*self.dd[i_mode]*dh
+                            v[2,0,:]+=Udiag[i_mode][indx]*(self.dd[i_mode]**2)*(dh**2)
+                            
+                        A[1,1,:]=A[0,2,:]
+                        A[1,0,:]=A[0,1,:]
+                        A[2,0,:]=A[0,2,:]
+                        A[2,1,:]=A[1,2,:]
+                        
+                        c0 = np.dot( np.linalg.inv(A[:,:,0]), v[:,:,0] )
+                        print("finite difference: ", hess[i_mode][j_mode] )
+                        print("regression: ", c0 )
+                        # ~ c1 = np.dot( np.linalg.inv(A[:,:,1]), v[:,:,1] )
+                        # ~ print("regression: ", c1 )
+                        # ~ c2 = np.dot( np.linalg.inv(A[:,:,2]), v[:,:,2] )
+                        # ~ print("regression: ", c2 )
+                        
+                        C=np.zeros((3,1,nstates))
+                        for i in range(nstates):
+                            C[:,:,i]=np.dot( np.linalg.inv(A[:,:,i]), v[:,:,i] )
+                            ## the next line is what saves the least squares regression result to the hessian
+                            hess[i_mode][j_mode][i]=2*C[2,0,i]
+                        
+                        
+                            
+                        
                     else:                   #off-diagonal
                         hess[i_mode][j_mode] = (Upp[i_mode][j_mode] - Ump[i_mode][j_mode]
                                                -Upm[i_mode][j_mode] + Umm[i_mode][j_mode]) / (2. * self.dd[i_mode] * 2. * self.dd[j_mode])

@@ -11,7 +11,9 @@ class Reader(object):
 
         energies = []
         states   = []
+        #print("string: ", string)
         for match in re.finditer(energy_regex, string):
+            #print("len(match.groups): ",  len(match.groups()) )
             if len(match.groups()) == 2:
                 energy = float(match.group(1))
             elif len(match.groups()) == 3:

@@ -11,10 +11,10 @@ from geometry import Geometry
 from input import Input
 from taskmanager import TaskManager
 
-bohr2A  = 0.529177
-au2eV   = 27.211386
-au2cm_1 = 219474.6313705
-c = 137.035999
+bohr2A  = 0.529177210544
+au2eV   = 27.211386245988
+au2cm_1 = 1./(bohr2A*10**(-10))*.01
+c = 137.035999177
 
 # Global error handler
 def global_except_hook(exctype, value, traceback):
@@ -163,17 +163,22 @@ if __name__ == '__main__':
                 
                 ngeom = copy.deepcopy(ref_geom)
 
-                w = float(data[0])/au2cm_1  #convert normal modes frequency to au
-                d = 1. #np.sqrt(1./(4. * np.pi**2 * c * w))
-                d = 1./(float(data[0])*(.53*10**-8))*(10**-5)
+                #w = float(data[0])/au2cm_1  #convert normal modes frequency to au
+                #d = 1./(float(data[0])*(bohr2A*10**-8))*(10**-5)
+                #print("old step size: ", d)
+                
+                d = 1./float(data[0])*10**3
+                #print("w [a.u.]: ", w )
+                print("step size: ", d )
 
                 #loop over coordinates in mode
                 for i_coord in range(n_coords):
                     val = incr * d * float(data[i_coord+1])
                     ngeom.set_i_coord(i_coord,val)
-
+                
                 coords.append(ngeom)
 
+    
     #generate norms of displacement vector
     masses = ngeom.atomic_masses
     Na = len(masses)    
@@ -187,13 +192,15 @@ if __name__ == '__main__':
                 if modes_fname is None:
                     val = coords[i_mode].get_i_coord(indx)**2
                 else:
-                    val = (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # remove mass scaling from normal modes
-
+                    val = (np.sqrt( masses[ia] ) * coords[i_mode].get_i_coord(indx))**2    # mass scale normal modes
+                    # ~ val = ( coords[i_mode].get_i_coord(indx))**2   
                 res += val
                 indx += 1
                 
         norm = np.sqrt(res) / bohr2A
         dd.append(norm)
+
+    print("\n\n\n dd: ",dd,"\n\n\n")
 
     #create task manager
     task_manager = TaskManager(tmp_dir,template_script_fname,run_out_fname,coords,dd)
@@ -266,6 +273,7 @@ if __name__ == '__main__':
         energy, grad, hess = task_manager.analyze(results_all, nstates,
             print_energy=calc_energy,print_grad=calc_force,print_hess=calc_hess)
 
+        print("here are the states: ", states)
         for ist in range(nstates):
             state_str = states[ist]
             fname = "%s.%s" % (EGH_out_fname,state_str)
