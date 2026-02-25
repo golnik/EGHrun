@@ -262,8 +262,8 @@ class TaskManager(object):
                         ## try a least squares regression
                         A = np.zeros((3,3,nstates))
                         v = np.zeros((3,1,nstates))
-                        print("A: ",A)
-                        print("v: ",v)
+                        # ~ print("A: ",A)
+                        # ~ print("v: ",v)
                         print("self.dd[i_mode]: ",self.dd[i_mode])
                         for indx in range(sd_ncoeffs):
                             dh=indx-((sd_ncoeffs-1)/2)

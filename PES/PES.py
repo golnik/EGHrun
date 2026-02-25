@@ -8,76 +8,88 @@ import operator
 import re
 
 
-## normal mode
-# ~ s="""
-# ~ 0.000000000000000000   -0.000000040396301685    0.140829092450106885    0.000000000000000000   -0.000000635027316615    0.470236558472093280    0.000000000000000000    0.000000637759132195   -0.257022259220435201    0.000000517932009366   -0.000000052489818735   -0.079492401540590354   -0.000000516982395376   -0.000000052621694554   -0.114068870623988766    0.000000000000000000    0.000002188461787337   -0.671245502605573030   -0.000000018926115118   -0.000000071822346075   -0.472316662990779401   
-# ~ """
-# ~ x = re.findall("([0-9]+\.[0-9]+|-[0-9]+\.[0-9]+)",s)
-# ~ N = np.zeros((21,1))
-# ~ for i in range(len(x)):
-    # ~ N[i]=x[i]
-# ~ print(N)
-# ~ print(np.dot(np.transpose(N),N))
-
 ## norm
-norm=0.5134824889114841
+norm=1.1504905808866939
 print(norm)
 
 
 ## PES scan
 s = """
-Calculation is performed. Results: [[-265.22256087, -254.39415917, -254.38736781], 1, [0, 1]]
-Calculation is performed. Results: [[-265.21969841, -254.389374, -254.3815731], 3, [0, 3]]
-Calculation is performed. Results: [[-265.22287927, -254.39457979, -254.38791653], 3, [0, 0]]
-Calculation is performed. Results: [[-265.22256087, -254.39415917, -254.38736781], 3, [0, 1]]
-Calculation is performed. Results: [[-265.22269, -254.39391682, -254.38715373], 3, [0, -1]]
-Calculation is performed. Results: [[-265.22015459, -254.38877, -254.38108999], 3, [0, -3]]
-Calculation is performed. Results: [[-265.22161044, -254.3925302, -254.38536727], 3, [0, 2]]
-Calculation is performed. Results: [[-265.22188725, -254.39207762, -254.38498242], 3, [0, -2]]
-Calculation is performed. Results: [[-265.22269, -254.39391682, -254.38715373], 1, [0, -1]]
+Calculation is performed. Results: [[-265.2799031477, -264.8812155052, -264.8393039783], 1, [0, 1]]
+Calculation is performed. Results: [[-265.2819650567, -264.8795094292, -264.8421863181], 3, [0, 0]]
+Calculation is performed. Results: [[-265.2713753772, -264.8800777188, -264.8309850111], 3, [0, 2]]
+Calculation is performed. Results: [[-265.2799031477, -264.8812155052, -264.8393039783], 3, [0, 1]]
+Calculation is performed. Results: [[-265.2819650567, -264.8795094292, -264.8421863181], 0]
+Calculation is performed. Results: [[-265.2722266911, -264.8743208221, -264.837153478], 3, [0, -2]]
+Calculation is performed. Results: [[-265.2506751089, -264.8696437005, -264.8111505408], 3, [0, 3]]
+Calculation is performed. Results: [[-265.252139879, -264.8623809302, -264.8196427317], 3, [0, -3]]
+Calculation is performed. Results: [[-265.2802569117, -264.8780397981, -264.8424748792], 1, [0, -1]]
+Calculation is performed. Results: [[-265.2802569117, -264.8780397981, -264.8424748792], 3, [0, -1]]
+
+
 """
     
 # ~ print(s)
 x = re.findall("([0-9]+\.[0-9]+|-[0-9]+\.[0-9]+)",s)
-# ~ print(x)
-y=[]
+print(x)
+
+
+GS=[]
+I1=[]
+I2=[]
 for i in range(int(len(x)/3)):
-    y.append(float(x[i*3+2]))
+    GS.append(float(x[i*3]))
+    I1.append(float(x[i*3+1]))
+    I2.append(float(x[i*3+2]))
     
 x = re.findall("(\[[0-9], [0-9]\]|\[[0-9], -[0-9]\])",s)
 px=[]
 for i in range(len(x)):
-    # ~ if i==7:
-        # ~ px.append(0)
+    if i==4:
+        px.append(0)
     f = re.findall("[0-9]|-[0-9]",x[i])
     px.append( float(f[1])*norm )
- 
-print(y)
-print(px)
 
-plt.scatter(px,y)
-plt.xlabel("dr (A)")
-plt.ylabel("E (a.u.)")
+px = np.array(px)
+
+## create subplots
+fig, ax = plt.subplots(2,1)
+fig.tight_layout(pad=3.0)
+plt.subplots_adjust(left=0.2)
+
+## do polynomial fits
+x = np.linspace( np.min(px), np.max(px) )
+f_GS = np.polyfit(px, GS, 2)
+f_I1 = np.polyfit(px, I1, 2)
+f_I2 = np.polyfit(px, I2, 2)
+
+
+## GS
+ax = plt.subplot(2,1,2);
+plt.scatter(px,GS)
+plt.plot(x,f_GS[0]*x**2+f_GS[1]*x+f_GS[2])
+ax.title.set_text("Ground state")
+ax.set_xlabel("dr (A)")
+ax.set_ylabel("E (a.u.)")
 plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-# ~ plt.show()
-plt.savefig("plot.pdf")
+plt.ylim([np.min(GS)-.01,np.min(GS)+.07])
 
 
-# ~ y=[-264.7711956839, -264.8627655557, -264.8684946103, -264.8684946103, -264.8297417466, -264.8627655557, -264.8745982789, -264.793125953, -264.874598279, -264.8424230117]
-# ~ px=[3.9096826151148623, 1.3032275383716208, -1.3032275383716208, -1.3032275383716208, 2.6064550767432415, 1.3032275383716208, 0.0, -3.9096826151148623, 0, -2.6064550767432415]
-# ~ plt.scatter(px,y)
-
-# ~ y=[-264.8745982789, -264.874598279, -264.8498924477, -264.8527818744, -264.8498924477, -264.6700625136, -264.8527818744, -264.4836287975, -264.6704480196, -264.4647773908]
-# ~ px=[0.0, 0, -4.101393875084795, 4.101393875084795, -4.101393875084795, 8.20278775016959, 4.101393875084795, 12.304181625254383, -8.20278775016959, -12.304181625254383]
-# ~ plt.scatter(px,y)
-
-# ~ y=[-264.874598279, -264.874598279, -264.8618385908, -264.8618385314, -264.8618385314, -264.8618385908, -264.7459216921, -264.7459219803, -264.5682803282, -264.5682798441]
-# ~ px=[0.0, 0, 2.68007800884092, -2.68007800884092, -2.68007800884092, 2.68007800884092, -5.36015601768184, 5.36015601768184, 8.04023402652276, -8.04023402652276]
-# ~ plt.scatter(px,y)
+## I1
+ax = plt.subplot(2,1,1);
+ax.title.set_text("Ionic states")
+plt.plot(x,f_I1[0]*x**2+f_I1[1]*x+f_I1[2])
+plt.scatter(px,I1)
+ax.set_xlabel("dr (A)")
+ax.set_ylabel("E (a.u.)")
+plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
 
 
-# ~ plt.xlabel("dr (A)")
-# ~ plt.ylabel("E (a.u.)")
-# ~ plt.show()
-# ~ plt.savefig("plot.pdf")
+## I2 
+plt.plot(x,f_I2[0]*x**2+f_I2[1]*x+f_I2[2])
+plt.scatter(px,I2)
+ax.set_xlabel("dr (A)")
+ax.set_ylabel("E (a.u.)")
+plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
 
+plt.savefig("allPES.png")
